@@ -1,0 +1,128 @@
+You are a world-class full-stack engineer and UI/UX designer. I need you to build the complete MVP for **Overmind OS**, the Operating System for the Agentic Economy. This is a startup by Emmanuel Samuel Ojima (18-year-old founder) that will be presented to investors and his brother (CEO of Zenith Chain). The code must be flawless, stunning, and work immediately out of the box.
+
+**PROJECT:** Overmind OS v1.0.0 — A production-grade infrastructure that gives every AI agent an identity, immutable audit log, and human-in-the-loop security controls.
+
+---
+
+### DELIVERABLES
+You must output **three complete files** in separate code blocks with clear labels:
+
+1. `backend/main.py` — the FastAPI server
+2. `frontend/dashboard.html` — the investor-facing dashboard (all inline, no external dependencies)
+3. `README.md` — the project documentation
+
+---
+
+### 1. BACKEND (`main.py`) REQUIREMENTS
+
+- **Framework:** FastAPI + Uvicorn
+- **CORS:** Allow all origins (for local development)
+- **In-memory AUDIT_LOG:** A list that stores all agent actions
+- **Endpoints:**
+  - `GET /api/v1/health` → `{"status": "Overmind OS Online", "timestamp": "..."}`
+  - `POST /api/v1/task` → Accepts JSON `{"prompt": "...", "user_id": "..."}`. Returns a `task_id` immediately and runs the workflow in the background using `BackgroundTasks`.
+  - `GET /api/v1/audit-log` → Returns `{"logs": AUDIT_LOG, "count": len(AUDIT_LOG)}`
+- **Workflow (simulated multi-agent execution):**
+  The background task must log the following events in this exact order (with 1-2 second sleeps between each):
+  - `Orchestrator | BOOT | SUCCESS | "Agent initialized with prompt: '...'"`
+  - `Orchestrator | PARSE_TASK | SUCCESS | "Task decomposed into subtasks."`
+  - `Research-Agent | SEARCH_WEB | PENDING | "Searching for relevant data..."`
+  - `Research-Agent | SEARCH_WEB | SUCCESS | "Found 3 relevant sources."`
+  - `Writer-Agent | GENERATE_TEXT | PENDING | "Drafting executive summary..."`
+  - `Writer-Agent | GENERATE_TEXT | SUCCESS | "Summary: [text]"`
+  - `Email-Agent | SEND_EMAIL | BLOCKED | "Action held for human approval per Overmind Policy."`
+- Each log entry structure: `{"id": uuid_hex[:8], "timestamp": ISO UTC, "agent_name": ..., "action": ..., "status": ..., "details": ...}`
+- Use Pydantic models for request validation.
+- Add print statements for live terminal logs.
+- The server must be runnable with: `uvicorn main:app --reload --port 8000`
+
+---
+
+### 2. FRONTEND (`dashboard.html`) REQUIREMENTS
+
+This dashboard must be **stunning, investor-grade, and fully mobile-responsive**. It must scream "trillion-dollar startup" when an investor opens it.
+
+**Design Language:**
+- **Colors:** Deep space black (`#050510`), midnight blue cards (`#0C0C20`), neon teal accent (`#00FFD1`), electric purple (`#B266FF`) for highlights, and glowing gradients.
+- **Effects:** Subtle glassmorphism on cards, smooth animations (fade-in, pulse), box-shadows with accent colors, hover glows.
+- **Typography:** 'Inter' or system sans-serif for UI elements, 'Space Mono' or monospace for data. (Since offline, use `@import` from Google Fonts with a fallback to system fonts if offline; but to be safe, use system fonts with a note, or just use clean sans-serif + monospace from local system.)
+- **Overall vibe:** Futuristic command center, like the bridge of a starship but clean and professional.
+
+**Layout & Responsiveness:**
+- **Mobile-first design.** Breakpoints:
+  - <480px: small phones (everything stacks vertically, cards for log entries)
+  - 480–768px: tablets/landscape phones (compact but still card-based)
+  - >768px: desktop (original table layout, max-width 1200px, centered)
+- **On mobile (<768px):** Log entries must be displayed as **cards**, not a table. Each card shows timestamp + status badge at top, then Agent, Action, Details with labels. The cards have subtle borders and glow on tap.
+- The input field and buttons must be full-width and stacked on mobile, with adequate spacing (min tap targets 48px).
+- No horizontal scroll at any width.
+- Viewport meta tag must be included.
+
+**Components:**
+- **Header:** "🧠 OVERMIND OS" in large glowing text, with a subtitle "Agentic Workforce Command Center".
+- **Connection Status:** A pulsing dot indicator with text. Auto-checks `/api/v1/health` every 15 seconds. Shows "🟢 All Systems Nominal" when connected, "🔴 Connection Lost" when disconnected, with appropriate colors.
+- **Task Input:** A sleek text input with placeholder "Enter mission directive...", and a "▶ DEPLOY AGENTS" button. The button should have a loading spinner when clicked.
+- **Audit Log Section:** A section titled "📜 IMMUTABLE AUDIT TRAIL". On desktop, a table with columns: Timestamp, Agent, Action, Details, Status. Status pills with colors (SUCCESS = teal, PENDING = amber, BLOCKED = red with slight shake animation). On mobile, card layout.
+- **Footer:** "Overmind OS v1.0.0 | Built by Emmanuel Samuel Ojima | The OS for the Agentic Economy" centered.
+
+**Functionality (must work exactly as before):**
+- On page load, check health and fetch initial logs.
+- "DEPLOY AGENTS" sends POST to `/api/v1/task` with the prompt, then polls logs every 2 seconds for 30 seconds.
+- "↻ REFRESH" button to manually fetch logs.
+- Auto-refresh logs every 10 seconds.
+- Error handling: if backend is unreachable, show a non-intrusive toast or status change; the dashboard must not crash.
+- All API calls use relative/localhost (`http://localhost:8000/api/v1`).
+- The dashboard must work when opened as a local file (double-click), with no build tools.
+
+**Code Quality:**
+- Single HTML file, no external libraries, all CSS and JS inline.
+- Use CSS custom properties for colors.
+- Well-commented, clearly organized (CSS at top, HTML structure, then JS at bottom).
+- All animations must be smooth (use `@keyframes`, `transition`).
+- No placeholder code; everything must function.
+
+---
+
+### 3. README.md REQUIREMENTS
+
+A professional, investor-facing README with:
+
+- **Project Title:** Overmind OS
+- **Tagline:** "The Operating System for the Agentic Economy"
+- **Problem:** Billions of AI agents will be deployed without identity, audit trails, or security. This is a $1T problem.
+- **Solution:** Overmind provides Agent Identity & Permissions, Immutable Audit Logging, and Human Approval Queues — making enterprise AI adoption safe and compliant.
+- **Tech Stack:** FastAPI (Python), Uvicorn, Pydantic, vanilla HTML/CSS/JS.
+- **Roadmap:**
+  - v0.1.0 ✅ Core Agent Wrapper & Audit Log (this MVP)
+  - v0.2.0 ⏳ Multi-Agent Workflows with CrewAI/LangGraph
+  - v0.3.0 ⏳ Enterprise SSO & Team Management
+  - v1.0.0 ⏳ Marketplace for Pre-Built Agents
+- **Founder:** Emmanuel Samuel Ojima, 17. Building the foundation for the next industrial revolution.
+- **License:** Apache 2.0
+- **How to Run:** clear instructions (`pip install -r requirements.txt`, `uvicorn main:app --reload --port 8000`, open `dashboard.html`).
+
+---
+
+### FINAL RULES
+- **ALL CODE MUST BE COMPLETE AND WORK IMMEDIATELY.** No truncations, no "..." placeholders.
+- The dashboard must look like a $100M company, not a student project.
+- Use only the name "Overmind OS" throughout.
+- Output the three files in separate, labeled code blocks (e.g., ```html, ```python, ```markdown).
+
+Now generate the entire project.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+**propmt2**
+

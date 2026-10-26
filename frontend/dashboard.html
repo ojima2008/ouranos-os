@@ -1,0 +1,863 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#060a17">
+  <title>Ouranos OS | Command Center</title>
+  <style>
+    :root {
+      --space: #060a17;
+      --panel: rgba(255, 255, 255, .05);
+      --panel-solid: #0a1124;
+      --line: rgba(255, 255, 255, .12);
+      --muted: #9aa7cc;
+      --text: #eef2ff;
+      --teal: #3de0ff;
+      --purple: #8b5cff;
+      --green: #2ee59d;
+      --orange: #ff9a4d;
+      --amber: #ffc857;
+      --red: #ff5c7a;
+      --shadow: 0 24px 80px rgba(0, 0, 0, .38);
+    }
+
+    * { box-sizing: border-box; }
+    * { user-select: none; -webkit-user-select: none; }
+    input, textarea { user-select: text; -webkit-user-select: text; }
+    html { background: var(--space); }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 8% -10%, rgba(61, 224, 255, .2), transparent 34rem),
+        radial-gradient(circle at 92% 6%, rgba(139, 92, 255, .22), transparent 31rem),
+        var(--space);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    body::before {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      opacity: .33;
+      background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 44px 44px;
+      content: "";
+      mask-image: linear-gradient(to bottom, black, transparent 82%);
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .shell { width: min(1200px, calc(100% - 40px)); margin: 0 auto; }
+    .app-shell { display: grid; grid-template-columns: 224px minmax(0, 1fr); gap: 28px; width: min(1440px, calc(100% - 48px)); margin: 0 auto; }
+    .sidebar { position: sticky; top: 24px; align-self: start; padding: 22px 14px; border: 1px solid var(--line); border-radius: 20px; background: rgba(255,255,255,.05); box-shadow: var(--shadow); backdrop-filter: blur(18px); }
+    .sidebar-brand { display: flex; align-items: center; gap: 9px; padding: 4px 10px 24px; color: var(--text); font-size: .86rem; font-weight: 800; letter-spacing: .08em; }
+    .sidebar-brand .brand-icon { width: 22px; height: 22px; margin: 0; }
+    .nav-label { padding: 0 10px 8px; color: var(--muted); font: 600 .61rem ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .14em; text-transform: uppercase; }
+    .nav { display: grid; gap: 5px; }
+    .nav-button { display: flex; align-items: center; gap: 11px; width: 100%; min-height: 45px; padding: 0 11px; border: 1px solid transparent; border-radius: 10px; color: var(--muted); background: transparent; text-align: left; font-size: .8rem; transition: .2s ease; }
+    .nav-button:hover, .nav-button.active { border-color: rgba(61,224,255,.25); color: var(--teal); background: rgba(61,224,255,.08); }
+    .nav-button .icon { width: 17px; height: 17px; }
+    .sidebar-foot { margin: 25px 10px 0; padding-top: 17px; border-top: 1px solid var(--line); color: var(--muted); font-size: .68rem; line-height: 1.6; }
+    .workspace { min-width: 0; }
+    .page { display: none; }
+    .page.active { display: block; animation: fadeIn .3s ease; }
+    .metrics.page.active { display: grid; }
+    .page-intro { margin: 34px 0 22px; }
+    .page-intro h2 { margin: 0; font-size: clamp(1.45rem, 3vw, 2rem); letter-spacing: -.04em; }
+    .page-intro p { margin: 7px 0 0; color: var(--muted); font-size: .88rem; }
+    .graph-panel { min-height: 360px; }
+    .graph { position: relative; display: grid; place-items: center; min-height: 300px; margin: 0 26px 26px; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: radial-gradient(circle, rgba(61,224,255,.12), transparent 45%), rgba(255,255,255,.03); }
+    .graph::before, .graph::after { position: absolute; border: 1px solid rgba(61,224,255,.2); border-radius: 50%; content: ""; }
+    .graph::before { width: 220px; height: 220px; animation: orbit 8s linear infinite; }
+    .graph::after { width: 330px; height: 330px; border-color: rgba(139,92,255,.2); animation: orbit 13s linear infinite reverse; }
+    .graph-core { z-index: 1; display: grid; place-items: center; width: 100px; height: 100px; border: 1px solid var(--teal); border-radius: 50%; color: var(--teal); background: #0a1124; box-shadow: 0 0 42px rgba(61,224,255,.25); text-align: center; font: 700 .65rem ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
+    .graph-node { position: absolute; z-index: 2; display: flex; align-items: center; gap: 7px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; color: var(--text); background: rgba(6,10,23,.9); font: .68rem ui-monospace, SFMono-Regular, Menlo, monospace; box-shadow: 0 7px 20px rgba(0,0,0,.25); }
+    .graph-node::before { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal); content: ""; }
+    .node-one { top: 18%; left: 12%; } .node-two { top: 18%; right: 12%; } .node-three { bottom: 18%; left: 20%; } .node-four { right: 20%; bottom: 18%; }
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 46px 0 34px;
+      border-bottom: 1px solid var(--line);
+    }
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--teal);
+      font: 600 .72rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 3.75rem);
+      line-height: 1;
+      letter-spacing: -.06em;
+      background: linear-gradient(120deg, var(--teal), var(--purple));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 38px rgba(61,224,255,.2);
+    }
+    .subtitle { margin: 14px 0 0; color: var(--muted); font-size: 1rem; }
+    .connection {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      border: 1px solid rgba(61,224,255,.25);
+      border-radius: 999px;
+      color: var(--teal);
+      background: rgba(61,224,255,.08);
+      white-space: nowrap;
+      font-size: .8rem;
+      font-weight: 700;
+    }
+    .connection.offline { border-color: rgba(255,92,122,.4); color: var(--red); background: rgba(255,92,122,.08); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 0 currentColor; animation: ping 2s infinite; }
+    .content { padding: 34px 0 64px; }
+    .demo-notice { margin: 20px 0 0; padding: 12px 16px; border: 1px solid rgba(255,200,87,.35); border-radius: 12px; color: var(--amber); background: rgba(255,200,87,.08); font-size: .82rem; }
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px; }
+    .metric, .panel {
+      border: 1px solid var(--line);
+      background: linear-gradient(145deg, rgba(255,255,255,.08), var(--panel));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+    .metric { padding: 20px; border-radius: 18px; }
+    .metric-label { color: var(--muted); font-size: .78rem; }
+    .metric-value { display: block; margin-top: 6px; font: 500 1.65rem ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .teal { color: var(--teal); } .purple { color: var(--purple); }
+    .revenue-panel { margin-bottom: 22px; }
+    .revenue-head { align-items: flex-start; }
+    .live-tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid rgba(61,224,255,.25); border-radius: 999px; color: var(--teal); background: rgba(61,224,255,.08); font: 700 .62rem ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+    .live-tag::before { width: 5px; height: 5px; border-radius: 50%; background: currentColor; box-shadow: 0 0 9px currentColor; content: ""; }
+    .revenue-grid { display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 12px; padding: 0 26px 26px; }
+    .revenue-card { min-height: 124px; padding: 17px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.03); }
+    .revenue-card.primary { border-color: rgba(61,224,255,.3); background: linear-gradient(145deg, rgba(61,224,255,.1), rgba(255,255,255,.03)); }
+    .revenue-label { color: var(--muted); font-size: .72rem; }
+    .revenue-value { display: block; margin: 8px 0 5px; color: var(--text); font: 600 1.5rem ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .revenue-card.primary .revenue-value { color: var(--teal); }
+    .revenue-note { color: var(--muted); font-size: .7rem; }
+    .monetization { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0 26px 26px; }
+    .monetization-item { padding: 14px 15px; border-left: 2px solid var(--purple); background: rgba(139,92,255,.1); }
+    .monetization-item strong { display: block; margin-bottom: 4px; font-size: .82rem; }
+    .monetization-item span { color: var(--muted); font-size: .72rem; }
+    .panel { overflow: hidden; border-radius: 24px; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 25px 26px 21px; }
+    .panel-title { margin: 0; font-size: 1.08rem; letter-spacing: -.02em; }
+    .panel-caption { margin: 5px 0 0; color: var(--muted); font-size: .8rem; }
+    .refresh {
+      min-height: 42px; padding: 0 15px; border: 1px solid var(--line); border-radius: 10px;
+      color: var(--text); background: rgba(255,255,255,.04); transition: .2s ease;
+    }
+    .refresh:hover { border-color: var(--teal); color: var(--teal); transform: translateY(-1px); }
+    .clear-button { border-color: var(--red); color: var(--red); }
+    .clear-button:hover { border-color: var(--red); color: #fff; background: rgba(255,92,122,.15); transform: translateY(-1px); }
+    .deploy-panel { margin-bottom: 22px; }
+    .deploy-form { display: flex; gap: 10px; padding: 0 26px 26px; }
+    .prompt {
+      flex: 1; min-width: 0; min-height: 52px; padding: 0 17px; border: 1px solid var(--line); border-radius: 12px;
+      outline: none; color: var(--text); background: #0a1124; transition: .2s ease;
+    }
+    .prompt::placeholder { color: var(--muted); }
+    .prompt:focus { border-color: var(--teal); box-shadow: 0 0 0 4px rgba(61,224,255,.12); }
+    .deploy {
+      min-height: 52px; padding: 0 22px; border: 0; border-radius: 12px; color: #fff;
+      background: linear-gradient(120deg, #0fb6d8, var(--purple)); font-weight: 800; letter-spacing: .02em;
+      box-shadow: 0 10px 28px rgba(61,224,255,.16); transition: .2s ease;
+    }
+    .deploy:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(61,224,255,.3); }
+    .deploy:disabled { cursor: wait; opacity: .7; }
+    .email-form { display: grid; gap: 10px; padding: 0 26px 26px; }
+    .email-form .prompt { min-height: 46px; padding: 10px 14px; }
+    .email-form textarea.prompt { min-height: 120px; padding-top: 12px; resize: vertical; }
+    .email-status { margin: 0 26px 18px; color: var(--muted); font-size: .78rem; }
+    .approval-email-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .integration-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 0 26px 18px; }
+    .integration-form .prompt { min-height: 44px; padding: 9px 12px; }
+    .integration-help { margin: 0 26px 18px; color: var(--muted); font-size: .76rem; }
+    .integration-form button { grid-column: 1 / -1; justify-self: start; }
+    .research-results { display: grid; gap: 10px; padding: 0 26px 26px; }
+    .research-result { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.03); }
+    .research-result a { color: var(--teal); font-weight: 700; overflow-wrap: anywhere; }
+    .research-result p { margin: 7px 0 0; color: var(--muted); font-size: .82rem; }
+    .research-answer { padding: 16px; border: 1px solid rgba(61,224,255,.25); border-radius: 14px; background: rgba(61,224,255,.06); white-space: pre-wrap; }
+    .research-sources-title { margin: 8px 0 0; color: var(--muted); font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+    .chat-transcript { display: grid; gap: 12px; max-height: 420px; overflow-y: auto; padding: 0 26px 16px; }
+    .chat-message { max-width: 88%; padding: 13px 15px; border: 1px solid var(--line); border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; }
+    .chat-message.user { justify-self: end; border-color: rgba(139,92,255,.4); background: rgba(139,92,255,.12); }
+    .chat-message.assistant { justify-self: start; background: rgba(255,255,255,.035); }
+    .chat-sources { display: grid; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); font-size: .78rem; }
+    .chat-sources a { color: var(--teal); overflow-wrap: anywhere; }
+    .chat-form { display: flex; gap: 10px; padding: 0 26px 18px; }
+    .chat-form textarea.prompt { min-height: 52px; max-height: 140px; padding: 14px; resize: vertical; }
+    .chat-tools { display: flex; justify-content: space-between; align-items: center; padding: 0 26px 18px; }
+    .chat-tools .email-status { margin: 0; }
+    .chat-clear { min-height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); background: transparent; }
+    @media (max-width: 600px) { .integration-form { grid-template-columns: 1fr; } }
+    .spinner { display: inline-block; width: 15px; height: 15px; margin-right: 7px; vertical-align: -2px; border: 2px solid rgba(0,20,17,.3); border-top-color: #001411; border-radius: 50%; animation: spin .7s linear infinite; }
+    .icon { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -.14em; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .brand-icon { width: .9em; height: .9em; margin-right: .18em; vertical-align: -.08em; color: var(--teal); filter: drop-shadow(0 0 12px rgba(61,224,255,.4)); }
+    .button-content { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .button-content .icon { width: 16px; height: 16px; }
+    .refresh .icon { transition: transform .35s ease; }
+    .refresh:hover .icon { transform: rotate(90deg); }
+    .section-icon { width: 18px; height: 18px; margin-right: 7px; color: var(--purple); vertical-align: -.2em; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { padding: 0 26px 13px; color: var(--muted); font: 600 .67rem ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .12em; text-transform: uppercase; }
+    td { padding: 17px 26px; border-top: 1px solid var(--line); font-size: .86rem; }
+    td:first-child { width: 190px; color: var(--muted); font: .73rem ui-monospace, SFMono-Regular, Menlo, monospace; }
+    td:nth-child(2) { width: 160px; font-weight: 650; } td:nth-child(3) { width: 165px; color: var(--purple); font: .75rem ui-monospace, SFMono-Regular, Menlo, monospace; }
+    td:nth-child(4) { color: var(--text); } td:last-child { width: 110px; }
+    .status { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; font: 700 .65rem ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; }
+    .status::before { width: 5px; height: 5px; border-radius: 50%; background: currentColor; content: ""; }
+    .success { color: var(--teal); background: rgba(61,224,255,.16); }
+    .pending { color: #06121f; background: var(--amber); animation: shake 2.8s ease-in-out infinite; }
+    .blocked { color: #06121f; background: var(--red); animation: shake 2.8s ease-in-out infinite; }
+    .approved { color: #06121f; background: var(--green); }
+    .denied { color: #06121f; background: var(--orange); }
+    .empty { padding: 48px 26px; color: var(--muted); text-align: center; }
+    .vault-panel { margin-bottom: 22px; }
+    .vault-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 0 26px 26px; }
+    .vault-card { padding: 15px; border: 1px solid rgba(61,224,255,.25); border-radius: 14px; background: rgba(255,255,255,.03); }
+    .vault-name { color: var(--teal); font: 700 .78rem ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .vault-key { display: block; margin: 9px 0; color: var(--text); font: .72rem ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .vault-meta { display: block; color: var(--muted); font-size: .7rem; }
+    .credential-cell { white-space: nowrap; color: var(--teal); font: .72rem ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .approval-container { padding: 26px; display: grid; gap: 16px; }
+    .approval-card { padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.03); }
+    .approval-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+    .approval-card-title { font-weight: 700; font-size: .95rem; margin: 0; color: var(--text); }
+    .approval-card-agent { font-size: .75rem; color: var(--purple); font-weight: 700; letter-spacing: .06em; }
+    .approval-card-details { color: var(--text); font-size: .85rem; line-height: 1.5; margin: 12px 0 14px; }
+    .approval-card-actions { display: flex; gap: 10px; }
+    .approve-btn, .reject-btn { flex: 1; padding: 10px 14px; border: 1px solid; border-radius: 10px; font-weight: 700; font-size: .75rem; letter-spacing: .05em; cursor: pointer; transition: .2s ease; }
+    .approve-btn { color: #fff; background: #12a874; border-color: #12a874; }
+    .approve-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(46,229,157,.24); }
+    .reject-btn { color: var(--red); background: transparent; border-color: var(--red); }
+    .reject-btn:hover { color: #fff; background: #d63a58; transform: translateY(-1px); }
+    footer { padding: 0 0 34px; color: var(--muted); text-align: center; font: .72rem ui-monospace, SFMono-Regular, Menlo, monospace; }
+    #toast { position: fixed; right: 20px; bottom: 20px; z-index: 4; max-width: min(360px, calc(100% - 40px)); padding: 13px 16px; border: 1px solid rgba(255,92,122,.4); border-radius: 12px; color: var(--text); background: #21121e; box-shadow: var(--shadow); transform: translateY(20px); opacity: 0; pointer-events: none; transition: .25s ease; }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    @keyframes ping { 0%, 100% { box-shadow: 0 0 0 0 currentColor; } 50% { box-shadow: 0 0 0 6px transparent; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes shake { 0%, 93%, 100% { transform: translateX(0); } 95% { transform: translateX(-2px); } 97% { transform: translateX(2px); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes orbit { to { transform: rotate(360deg); } }
+    @media (max-width: 768px) {
+      .app-shell { display: block; width: min(100% - 28px, 620px); } .sidebar { position: static; margin-top: 14px; padding: 12px; } .sidebar-brand, .sidebar-foot, .nav-label { display: none; } .nav { display: flex; overflow-x: auto; } .nav-button { flex: 0 0 auto; width: auto; padding: 0 12px; } .nav-button span { display: none; } .shell { width: 100%; } .topbar { padding-top: 28px; flex-direction: column; } .connection { align-self: flex-start; }
+      .metrics { grid-template-columns: repeat(3, 1fr); gap: 8px; } .metric { padding: 14px 12px; } .metric-value { font-size: 1.2rem; } .panel-head { padding: 20px 17px 17px; } .deploy-form { flex-direction: column; padding: 0 17px 18px; } .deploy, .prompt { width: 100%; }
+      .table-wrap { overflow: visible; } table, tbody { display: block; } thead { display: none; } tr { display: block; margin: 0 14px 12px; padding: 15px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.03); } td { display: grid; grid-template-columns: 82px 1fr; gap: 10px; width: auto !important; padding: 7px 0; border: 0; font-size: .82rem; } td::before { color: var(--muted); font: 600 .62rem ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .1em; text-transform: uppercase; content: attr(data-label); } td:first-child { font-size: .68rem; } .empty { padding: 38px 18px; }
+      .revenue-grid, .monetization, .vault-grid { grid-template-columns: 1fr; padding-right: 17px; padding-left: 17px; } .graph { margin-right: 17px; margin-left: 17px; } .graph-node { font-size: .58rem; } .node-one { left: 4%; } .node-two { right: 4%; } .node-three { left: 5%; } .node-four { right: 5%; }
+      .revenue-card { min-height: 0; }
+    }
+    @media (max-width: 420px) { .shell { width: calc(100% - 22px); } .metrics { grid-template-columns: 1fr; } .metric { display: flex; align-items: center; justify-content: space-between; } .topbar { padding-bottom: 25px; } h1 { font-size: 2.2rem; } }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Main navigation">
+      <div class="sidebar-brand"><svg class="icon brand-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5a3 3 0 0 0-3 3v1a3 3 0 0 0-2 2.8V14a3 3 0 0 0 3 3h1v2.5h2V17h2v2.5h2V17h1a3 3 0 0 0 3-3v-2.7a3 3 0 0 0-2-2.8v-1a3 3 0 0 0-3-3H9Z"/><path d="M8 11h.01M16 11h.01M9 14c1.8 1 4.2 1 6 0M12 4.5V3"/></svg>OURANOS OS</div>
+      <div class="nav-label">Workspace</div>
+      <nav class="nav">
+        <button class="nav-button active" type="button" data-page="command"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg><span>Command center</span></button>
+        <button class="nav-button" type="button" data-page="revenue"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h17"/><path d="m7 15 4-4 3 2 6-7"/></svg><span>Revenue engine</span></button>
+        <button class="nav-button" type="button" data-page="trust"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/></svg><span>Trust graph</span></button>
+        <button class="nav-button" type="button" data-page="agents"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M3 20c0-3 2.5-5 6-5s6 2 6 5M15 15c3 0 5 1.5 6 4"/></svg><span>Agent fleet</span></button>
+        <button class="nav-button" type="button" data-page="policies"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 20 6v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6l8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg><span>Policies</span></button>
+        <button class="nav-button" type="button" data-page="approval"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/><circle cx="12" cy="5" r="1"/></svg><span>Human approval</span></button>
+      </nav>
+      <div class="sidebar-foot">SECURITY LAYER ONLINE<br>v0.3.0 · Investor preview</div>
+    </aside>
+    <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Infrastructure for the agentic economy</p>
+        <h1><svg class="icon brand-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5a3 3 0 0 0-3 3v1a3 3 0 0 0-2 2.8V14a3 3 0 0 0 3 3h1v2.5h2V17h2v2.5h2V17h1a3 3 0 0 0 3-3v-2.7a3 3 0 0 0-2-2.8v-1a3 3 0 0 0-3-3H9Z"/><path d="M8 11h.01M16 11h.01M9 14c1.8 1 4.2 1 6 0M12 4.5V3"/></svg>OURANOS OS</h1>
+        <p class="subtitle">Agentic Workforce Command Center</p>
+      </div>
+      <div id="connection" class="connection offline"><span class="dot"></span><span id="connectionText">Connecting...</span></div>
+    </header>
+
+    <section class="content">
+      <p id="demoNotice" class="demo-notice" role="status" hidden>INVESTOR DEMO — Activity, metrics, and AI replies are simulated. No API calls are made and no emails are sent.</p>
+      <div class="page-intro page active" data-page-view="command"><p class="eyebrow">Operations overview</p><h2>Command center</h2><p>Deploy governed missions and watch the workforce prove its work in real time.</p></div>
+      <div class="metrics page active" data-page-view="command" aria-label="System metrics">
+        <div class="metric"><span class="metric-label">AUDIT EVENTS</span><strong id="eventCount" class="metric-value teal">0</strong></div>
+        <div class="metric"><span class="metric-label">ACTIVE AGENTS</span><strong class="metric-value purple">04</strong></div>
+        <div class="metric"><span class="metric-label">POLICY COVERAGE</span><strong class="metric-value">100%</strong></div>
+      </div>
+
+      <section class="panel vault-panel page active" data-page-view="command">
+        <div class="panel-head">
+          <div><h2 class="panel-title">🔐 Credential vault status</h2><p class="panel-caption">Demo vault telemetry. Live provider keys are configured separately and never shown here.</p></div>
+          <span id="vaultCount" class="live-tag">0 credentials</span>
+        </div>
+        <div id="vaultGrid" class="vault-grid"><div class="empty">Loading vault status...</div></div>
+      </section>
+
+      <section class="panel revenue-panel page" data-page-view="revenue">
+        <div class="panel-head revenue-head">
+          <div><h2 class="panel-title">Revenue engine</h2><p class="panel-caption">A usage-led model that compounds as teams deploy more agents.</p></div>
+          <span class="live-tag">Live model</span>
+        </div>
+        <div class="revenue-grid" aria-label="Live revenue indicators">
+          <div class="revenue-card primary"><span class="revenue-label">PROJECTED MONTHLY RECURRING REVENUE</span><strong id="mrrValue" class="revenue-value">$12,480</strong><span class="revenue-note">Based on active workspace and API usage</span></div>
+          <div class="revenue-card"><span class="revenue-label">API EVENTS THIS SESSION</span><strong id="apiEvents" class="revenue-value">0</strong><span class="revenue-note">Metered audit events</span></div>
+          <div class="revenue-card"><span class="revenue-label">ESTIMATED USAGE RUN-RATE</span><strong id="usageRunRate" class="revenue-value">$0.00</strong><span class="revenue-note">At $0.04 per governed event</span></div>
+        </div>
+        <div class="monetization">
+          <div class="monetization-item"><strong>Platform subscription</strong><span>Team plans from $499/month; enterprise controls and SSO expand ACV.</span></div>
+          <div class="monetization-item"><strong>Governance API</strong><span>Usage pricing per verified action, audit event, and policy decision.</span></div>
+          <div class="monetization-item"><strong>Agent marketplace</strong><span>Take a 15% distribution fee on certified agents and workflow templates.</span></div>
+        </div>
+      </section>
+
+      <section class="panel deploy-panel page active" data-page-view="command">
+        <div class="panel-head">
+          <div><h2 class="panel-title">Deploy a mission</h2><p class="panel-caption">Simulated workflow demo. Use the dedicated integrations below for live external actions.</p></div>
+        </div>
+        <form id="taskForm" class="deploy-form">
+          <input id="prompt" class="prompt" type="text" maxlength="2000" placeholder="Enter mission directive..." autocomplete="off" required>
+          <button id="deployButton" class="deploy" type="submit"><span class="button-content"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m13 3-9 11h7l-1 7 9-11h-7l1-7Z"/></svg>DEPLOY AGENTS</span></button>
+        </form>
+      </section>
+
+      <section class="panel deploy-panel page active" data-page-view="command">
+        <div class="panel-head">
+          <div><h2 class="panel-title">Ouranos AI chat</h2><p class="panel-caption">Ask questions or research current topics with Gemini and Google Search grounding.</p></div>
+        </div>
+        <div id="chatTranscript" class="chat-transcript" role="log" aria-live="polite">
+          <article class="chat-message assistant">Hi! I’m Ouranos. Ask me anything, or ask me to research a current topic.</article>
+        </div>
+        <div class="chat-tools"><p id="chatStatus" class="email-status">Checking Gemini configuration...</p><button id="chatClear" class="chat-clear" type="button">New chat</button></div>
+        <form id="chatForm" class="chat-form">
+          <textarea id="chatInput" class="prompt" maxlength="4000" placeholder="Message Ouranos..." aria-label="Message Ouranos" required></textarea>
+          <button id="chatSend" class="deploy" type="submit">Send</button>
+        </form>
+      </section>
+
+      <section class="panel deploy-panel page active" data-page-view="command">
+        <div class="panel-head">
+          <div><h2 class="panel-title">Integrations &amp; credentials</h2><p class="panel-caption">Provider keys go directly to the local backend and are held in memory.</p></div>
+        </div>
+        <p id="integrationStatus" class="email-status">Checking configured integrations...</p>
+        <p class="integration-help">Copy the local setup token from the backend terminal. It authorizes credential changes and is regenerated each time the server starts. Blank fields leave existing settings unchanged. Never share this token or put provider keys in GitHub.</p>
+        <form id="integrationForm" class="integration-form">
+          <input id="setupToken" class="prompt" type="password" maxlength="200" placeholder="Local setup token" autocomplete="off" required>
+          <input id="geminiKey" class="prompt" type="password" maxlength="500" placeholder="Gemini API key for AI chat (optional)" autocomplete="new-password">
+          <input id="resendKey" class="prompt" type="password" maxlength="500" placeholder="Resend API key (optional)" autocomplete="new-password">
+          <input id="resendSender" class="prompt" type="text" maxlength="320" placeholder="Resend sender address (optional)">
+          <input id="allowedRecipients" class="prompt" type="text" maxlength="2000" placeholder="Allowed email(s), comma-separated (optional)">
+          <button id="saveIntegrations" class="deploy" type="submit">Save integrations on backend</button>
+        </form>
+      </section>
+
+      <section class="panel deploy-panel page active" data-page-view="command">
+        <div class="panel-head">
+          <div><h2 class="panel-title">Send a real email</h2><p class="panel-caption">A live Resend integration. Every message must be approved before sending.</p></div>
+        </div>
+        <p id="emailStatus" class="email-status">Checking email integration configuration...</p>
+        <form id="emailForm" class="email-form">
+          <input id="emailTo" class="prompt" type="email" maxlength="320" placeholder="Recipient email" autocomplete="email" required>
+          <input id="emailSubject" class="prompt" type="text" maxlength="200" placeholder="Subject" required>
+          <textarea id="emailBody" class="prompt" maxlength="5000" placeholder="Write the email message..." required></textarea>
+          <button id="emailDraftButton" class="deploy" type="submit">Submit email for approval</button>
+        </form>
+      </section>
+
+      <section class="panel page active" data-page-view="command">
+        <div class="panel-head">
+          <div><h2 class="panel-title"><svg class="icon section-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Immutable audit trail</h2><p class="panel-caption">Live ledger of every agent decision and system control.</p></div>
+          <div style="display: flex; gap: 8px;">
+            <button id="refreshButton" class="refresh" type="button"><span class="button-content"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0 1 4"/><path d="M20 4v7h-7"/></svg>Refresh</span></button>
+            <button id="clearButton" class="refresh clear-button" type="button" title="Clear all audit logs and reset dashboard"><span class="button-content"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6v10a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6M10 11v4M14 11v4"/><path d="M5 6h1v2M18 6h1v2"/></svg>Clear</span></button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Timestamp</th><th>Agent</th><th>Action</th><th>Credential</th><th>Details</th><th>Status</th></tr></thead>
+            <tbody id="logBody"><tr><td colspan="6" class="empty">Awaiting the first mission...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="panel graph-panel page" data-page-view="trust">
+        <div class="panel-head"><div><h2 class="panel-title">Trust graph</h2><p class="panel-caption">A living proof network connecting identity, policy, execution, and outcome.</p></div><span class="live-tag">Streaming</span></div>
+        <div class="graph" aria-label="Animated trust graph visualization">
+          <div class="graph-core">OURANOS<br>TRUST LAYER</div>
+          <div class="graph-node node-one">Identity verified</div><div class="graph-node node-two">Policy checked</div><div class="graph-node node-three">Action observed</div><div class="graph-node node-four">Human control</div>
+        </div>
+      </section>
+      <section class="panel page" data-page-view="agents">
+        <div class="panel-head"><div><h2 class="panel-title">Agent fleet</h2><p class="panel-caption">Every worker operates with scoped identity and measurable accountability.</p></div></div>
+        <div class="revenue-grid"><div class="revenue-card primary"><span class="revenue-label">ORCHESTRATOR</span><strong class="revenue-value">ONLINE</strong><span class="revenue-note">Mission routing and decomposition</span></div><div class="revenue-card"><span class="revenue-label">RESEARCH AGENT</span><strong class="revenue-value">READY</strong><span class="revenue-note">Source discovery and evidence capture</span></div><div class="revenue-card"><span class="revenue-label">WRITER + EMAIL</span><strong class="revenue-value">GUARDED</strong><span class="revenue-note">Human approval boundary enabled</span></div></div>
+      </section>
+      <section class="panel page" data-page-view="policies">
+        <div class="panel-head"><div><h2 class="panel-title">Policy center</h2><p class="panel-caption">The commercial moat: programmable controls that make autonomous work safe for enterprises.</p></div></div>
+        <div class="monetization"><div class="monetization-item"><strong>Human approval gates</strong><span>Block sensitive actions until an accountable operator approves.</span></div><div class="monetization-item"><strong>Immutable evidence</strong><span>Export a complete chain of events for compliance and incident review.</span></div><div class="monetization-item"><strong>Least-privilege access</strong><span>Give each agent only the permissions required for its mission.</span></div></div>
+      </section>
+      <section class="panel page" data-page-view="approval">
+        <div class="panel-head"><div><h2 class="panel-title">Human approval gate</h2><p class="panel-caption">Review and approve/reject sensitive agent actions before execution.</p></div></div>
+        <div id="approvalContainer" class="approval-container">
+          <div class="empty" style="padding: 60px 26px; text-align: center;">
+            <p style="color: var(--muted); margin: 0; font-size: .9rem;">
+              No pending approvals. Deploy a mission to trigger actions that need human approval.
+            </p>
+          </div>
+        </div>
+      </section>
+    </section>
+    <footer>Ouranos OS v0.3.0 · Built by Emmanuel Samuel Ojima · The OS for the Agentic Economy</footer>
+    </main>
+  </div>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const API_BASE = "http://localhost:8000/api/v1";
+    const DEMO_MODE = new URLSearchParams(window.location.search).get("demo") === "1";
+    const els = {
+      connection: document.getElementById("connection"), connectionText: document.getElementById("connectionText"),
+      demoNotice: document.getElementById("demoNotice"),
+      eventCount: document.getElementById("eventCount"), logBody: document.getElementById("logBody"),
+      mrrValue: document.getElementById("mrrValue"), apiEvents: document.getElementById("apiEvents"),
+      usageRunRate: document.getElementById("usageRunRate"),
+      taskForm: document.getElementById("taskForm"), prompt: document.getElementById("prompt"),
+      deployButton: document.getElementById("deployButton"), refreshButton: document.getElementById("refreshButton"),
+      clearButton: document.getElementById("clearButton"),
+      approvalContainer: document.getElementById("approvalContainer"),
+      vaultGrid: document.getElementById("vaultGrid"), vaultCount: document.getElementById("vaultCount"),
+      emailForm: document.getElementById("emailForm"), emailTo: document.getElementById("emailTo"),
+      emailSubject: document.getElementById("emailSubject"), emailBody: document.getElementById("emailBody"),
+      emailStatus: document.getElementById("emailStatus"), emailDraftButton: document.getElementById("emailDraftButton"),
+      integrationForm: document.getElementById("integrationForm"), integrationStatus: document.getElementById("integrationStatus"),
+      setupToken: document.getElementById("setupToken"), geminiKey: document.getElementById("geminiKey"),
+      resendKey: document.getElementById("resendKey"), resendSender: document.getElementById("resendSender"),
+      allowedRecipients: document.getElementById("allowedRecipients"), saveIntegrations: document.getElementById("saveIntegrations"),
+      chatForm: document.getElementById("chatForm"), chatInput: document.getElementById("chatInput"),
+      chatSend: document.getElementById("chatSend"), chatStatus: document.getElementById("chatStatus"),
+      chatTranscript: document.getElementById("chatTranscript"), chatClear: document.getElementById("chatClear"),
+      toast: document.getElementById("toast")
+    };
+    let toastTimer;
+    let allLogs = [];
+    let pendingApprovals = {};
+    let chatHistory = [];
+    let chatInProgress = false;
+
+    function setConnection(online) {
+      els.connection.classList.toggle("offline", !online);
+      els.connectionText.textContent = DEMO_MODE
+        ? "Investor Demo · Simulated"
+        : online ? "All Systems Nominal" : "Connection Lost";
+    }
+    function showToast(message) {
+      els.toast.textContent = message; els.toast.classList.add("show");
+      clearTimeout(toastTimer); toastTimer = setTimeout(() => els.toast.classList.remove("show"), 4200);
+    }
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
+    }
+    function formatTime(timestamp) {
+      const date = new Date(timestamp); return Number.isNaN(date.getTime()) ? timestamp : date.toLocaleString([], { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    }
+    function renderLogs(logs) {
+      allLogs = logs;
+      els.eventCount.textContent = logs.length;
+      els.apiEvents.textContent = logs.length;
+      els.usageRunRate.textContent = `$${(logs.length * 0.04).toFixed(2)}`;
+      els.mrrValue.textContent = `$${(12480 + logs.length * 0.04).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+      if (!logs.length) { els.logBody.innerHTML = '<tr><td colspan="6" class="empty">Awaiting the first mission...</td></tr>'; return; }
+      els.logBody.innerHTML = [...logs].reverse().map(log => {
+        const status = String(log.status || "").toLowerCase();
+        const credential = log.credential_source ? `🔐 ${log.credential_source} (${log.credential_masked || "masked"})` : "—";
+        return `<tr><td data-label="Timestamp">${escapeHtml(formatTime(log.timestamp))}</td><td data-label="Agent">${escapeHtml(log.agent_name)}</td><td data-label="Action">${escapeHtml(log.action)}</td><td data-label="Credential" class="credential-cell">${escapeHtml(credential)}</td><td data-label="Details">${escapeHtml(log.details)}</td><td data-label="Status"><span class="status ${status}">${escapeHtml(log.status)}</span></td></tr>`;
+      }).join("");
+    }
+    function renderVault(vault) {
+      const entries = Object.entries(vault || {});
+      els.vaultCount.textContent = `${entries.length} credentials`;
+      els.vaultGrid.innerHTML = entries.length ? entries.map(([name, credential]) => `
+        <div class="vault-card">
+          <span class="vault-name">🔐 ${escapeHtml(name)}</span>
+          <span class="vault-key">${escapeHtml(credential.key_masked)}</span>
+          <span class="vault-meta">${escapeHtml(credential.type)} · ${Number(credential.usage_count || 0)} uses</span>
+          <span class="vault-meta">Last used: ${credential.last_used ? escapeHtml(formatTime(credential.last_used)) : "Never"}</span>
+        </div>`).join("") : '<div class="empty">Vault status unavailable.</div>';
+    }
+    function renderApprovals(approvals) {
+      if (!approvals.length) {
+        els.approvalContainer.innerHTML = '<div class="empty" style="padding: 60px 26px; text-align: center;"><p style="color: var(--muted); margin: 0; font-size: .9rem;">No pending approvals. All actions have been reviewed.</p></div>';
+        return;
+      }
+      els.approvalContainer.innerHTML = approvals.map(approval => {
+        const approvalId = approval.approval_id;
+        const params = approval.params || {};
+        const log = allLogs.find(entry => entry.approval_id === approvalId);
+        const details = approval.integration === "resend"
+          ? `<div><strong>To:</strong> ${escapeHtml(params.to)}</div><div><strong>Subject:</strong> ${escapeHtml(params.subject)}</div><div class="approval-email-body">${escapeHtml(params.body)}</div>`
+          : escapeHtml(log?.details || JSON.stringify(params));
+        return `
+          <div class="approval-card">
+            <div class="approval-card-header">
+              <div>
+                <div class="approval-card-title">${escapeHtml(approval.action)}</div>
+                <div class="approval-card-agent">${escapeHtml(approval.agent_name)}</div>
+              </div>
+              <div style="font-size: .72rem; color: var(--muted);">${escapeHtml(formatTime(approval.created_at))}</div>
+            </div>
+            <div class="approval-card-details">${details}</div>
+            <div class="approval-card-actions">
+              <button class="approve-btn" onclick="approveAction('${approvalId.replace(/'/g, "\\'")}')">✓ APPROVE</button>
+              <button class="reject-btn" onclick="rejectAction('${approvalId.replace(/'/g, "\\'")}')">✗ REJECT</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+    function initializeDemo() {
+      els.demoNotice.hidden = false;
+      setConnection(true);
+      renderLogs([
+        {
+          timestamp: new Date(Date.now() - 120000).toISOString(),
+          agent_name: "Policy-Agent",
+          action: "POLICY_CHECK",
+          details: "SIMULATION: Mission permissions checked against the demo policy.",
+          status: "SUCCESS"
+        },
+        {
+          timestamp: new Date(Date.now() - 60000).toISOString(),
+          agent_name: "Research-Agent",
+          action: "RESEARCH",
+          details: "SIMULATION: Research step recorded; no external search was performed.",
+          status: "SUCCESS"
+        },
+        {
+          timestamp: new Date().toISOString(),
+          agent_name: "Audit-Agent",
+          action: "AUDIT_RECORD",
+          details: "SIMULATION: Demo event added to the browser-only audit view.",
+          status: "SUCCESS"
+        }
+      ]);
+      renderVault({
+        "demo_email": { key_masked: "DEMO****ONLY", type: "simulated", usage_count: 2, last_used: null },
+        "demo_search": { key_masked: "DEMO****ONLY", type: "simulated", usage_count: 1, last_used: null }
+      });
+      renderApprovals([]);
+      els.integrationStatus.textContent = "Demo mode: no credentials are used or saved.";
+      els.chatStatus.textContent = "Simulated replies only. No Gemini request is made.";
+      els.emailStatus.textContent = "Demo mode: email is disabled and no messages will be sent.";
+      els.chatSend.disabled = false;
+      els.emailDraftButton.disabled = true;
+      els.integrationForm.querySelectorAll("input, button").forEach(control => { control.disabled = true; });
+      els.emailForm.querySelectorAll("input, textarea, button").forEach(control => { control.disabled = true; });
+      appendChatMessage("assistant", "Investor demo mode is on. Try a question to see a clearly labelled simulated reply.");
+    }
+    async function approveAction(approvalId) {
+      try {
+        const result = await request(`/approve/${encodeURIComponent(approvalId)}`, { method: "POST" });
+        await fetchLogs(false);
+        await fetchVault();
+        showToast(result.status === "sent" ? "✓ Email sent after approval." : "✓ Action approved by human operator.");
+      } catch (error) { showToast("Could not approve this action."); }
+    }
+    async function rejectAction(approvalId) {
+      try {
+        await request(`/reject/${encodeURIComponent(approvalId)}`, { method: "POST" });
+        await fetchLogs(false);
+        showToast("✗ Action rejected by human operator.");
+      } catch (error) { showToast("Could not reject this action."); }
+    }
+    function selectPage(pageName) {
+      document.querySelectorAll("[data-page-view]").forEach(page => page.classList.toggle("active", page.dataset.pageView === pageName));
+      document.querySelectorAll(".nav-button").forEach(button => button.classList.toggle("active", button.dataset.page === pageName));
+      const titles = { command: "Command center", revenue: "Revenue engine", trust: "Trust graph", agents: "Agent fleet", policies: "Policy center", approval: "Human approval gate" };
+      document.querySelector(".page-intro h2").textContent = titles[pageName] || "Ouranos OS";
+    }
+    async function request(path, options) {
+      const response = await fetch(API_BASE + path, options);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || `Request failed (${response.status})`);
+      }
+      return response.json();
+    }
+    async function checkHealth() {
+      try { await request("/health"); setConnection(true); } catch (error) { setConnection(false); }
+    }
+    async function fetchLogs(showError = true) {
+      try {
+        const [data, approvalData] = await Promise.all([request("/audit-log"), request("/approvals")]);
+        renderLogs(data.logs || []);
+        renderApprovals(approvalData.approvals || []);
+        setConnection(true);
+      }
+      catch (error) { setConnection(false); if (showError) showToast("The audit stream is temporarily unavailable."); }
+    }
+    async function fetchEmailStatus() {
+      try {
+        const status = await request("/email/status");
+        els.emailStatus.textContent = status.configured
+          ? "Live email is configured. Only server-allowlisted recipients can be submitted."
+          : "Email is not configured yet. Add the Resend key, sender address, and recipient allowlist in Integrations.";
+        els.emailDraftButton.disabled = !status.configured;
+      } catch (error) {
+        els.emailStatus.textContent = "Could not check live email configuration.";
+        els.emailDraftButton.disabled = true;
+      }
+    }
+    async function fetchIntegrationStatus() {
+      try {
+        const status = await request("/integrations/status");
+        els.integrationStatus.textContent = `Research: Gemini ${status.gemini_configured ? "saved (not verified)" : "not configured"} · Resend: ${status.resend_configured ? "configured" : "not configured"}. Provider keys are never returned by the API.`;
+        if (!status.gemini_configured) {
+          els.chatStatus.textContent = "Add a Gemini API key in Integrations to start chatting.";
+        } else if (!chatInProgress) {
+          els.chatStatus.textContent = "Gemini is ready. Chat history remains in this browser tab.";
+        }
+        els.chatSend.disabled = chatInProgress || !status.gemini_configured;
+      } catch (error) {
+        els.integrationStatus.textContent = "Could not check integration status.";
+        els.chatStatus.textContent = "Could not check Gemini configuration.";
+        els.chatSend.disabled = true;
+      }
+    }
+    async function saveIntegrations(event) {
+      event.preventDefault();
+      els.saveIntegrations.disabled = true;
+      try {
+        await request("/integrations/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            setup_token: els.setupToken.value,
+            gemini_api_key: els.geminiKey.value || null,
+            resend_api_key: els.resendKey.value || null,
+            resend_from_email: els.resendSender.value || null,
+            allowed_recipients: els.allowedRecipients.value || null
+          })
+        });
+        els.integrationForm.reset();
+        await fetchIntegrationStatus();
+        await fetchEmailStatus();
+        showToast("Integration settings saved in backend memory.");
+      } catch (error) {
+        showToast(error.message || "Could not save integration settings.");
+      } finally {
+        els.saveIntegrations.disabled = false;
+      }
+    }
+    function appendChatMessage(role, text, sources = []) {
+      const message = document.createElement("article");
+      message.className = `chat-message ${role}`;
+      message.textContent = text;
+      if (role === "assistant" && sources.length) {
+        const sourceList = document.createElement("div");
+        sourceList.className = "chat-sources";
+        const heading = document.createElement("strong");
+        heading.textContent = "Sources";
+        sourceList.append(heading);
+        for (const source of sources) {
+          let safeUrl;
+          try { safeUrl = new URL(source.url); } catch (error) { continue; }
+          if (!["http:", "https:"].includes(safeUrl.protocol)) continue;
+          const link = document.createElement("a");
+          link.href = safeUrl.href;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = source.title || safeUrl.hostname;
+          sourceList.append(link);
+        }
+        if (sourceList.childElementCount > 1) message.append(sourceList);
+      }
+      els.chatTranscript.append(message);
+      els.chatTranscript.scrollTop = els.chatTranscript.scrollHeight;
+      return message;
+    }
+    async function sendChatMessage(event) {
+      event.preventDefault();
+      const userMessage = els.chatInput.value.trim();
+      if (!userMessage || chatInProgress) return;
+      chatHistory.push({ role: "user", content: userMessage });
+      appendChatMessage("user", userMessage);
+      els.chatInput.value = "";
+      if (DEMO_MODE) {
+        chatInProgress = true;
+        els.chatSend.disabled = true;
+        els.chatStatus.textContent = "Preparing a simulated demo reply...";
+        const thinking = appendChatMessage("assistant", "Preparing demo response...");
+        await new Promise(resolve => setTimeout(resolve, 700));
+        thinking.remove();
+        const answer = "SIMULATED DEMO RESPONSE — This is sample text, not an AI-generated answer and not live research. In a connected deployment, Ouranos would process the request under configured policies, use an authorized agent, and record the result for human review.";
+        chatHistory.push({ role: "assistant", content: answer });
+        appendChatMessage("assistant", answer);
+        els.chatStatus.textContent = "Simulated reply shown. No API call or web search was made.";
+        chatInProgress = false;
+        els.chatSend.disabled = false;
+        return;
+      }
+      chatInProgress = true;
+      els.chatSend.disabled = true;
+      els.chatStatus.textContent = "Gemini is thinking and checking the web...";
+      const thinking = appendChatMessage("assistant", "Thinking...");
+      try {
+        const data = await request("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: chatHistory.slice(-12) })
+        });
+        thinking.remove();
+        chatHistory.push({ role: "assistant", content: data.answer });
+        chatHistory = chatHistory.slice(-12);
+        appendChatMessage("assistant", data.answer, data.sources || []);
+        els.chatStatus.textContent = data.count
+          ? `Answered with ${data.count} Google Search source${data.count === 1 ? "" : "s"}.`
+          : "Answered. Gemini did not need to cite web sources for this reply.";
+        await fetchLogs(false);
+      } catch (error) {
+        thinking.remove();
+        chatHistory.pop();
+        appendChatMessage("assistant", `Sorry, I couldn't complete that reply. ${error.message || "Please try again."}`);
+        els.chatStatus.textContent = "The reply failed. Your question is still visible above; try sending it again.";
+      } finally {
+        chatInProgress = false;
+        await fetchIntegrationStatus();
+      }
+    }
+    function startNewChat() {
+      chatHistory = [];
+      els.chatTranscript.replaceChildren();
+      appendChatMessage(
+        "assistant",
+        DEMO_MODE
+          ? "Investor demo mode is on. Try a question to see a clearly labelled simulated reply."
+          : "Hi! I’m Ouranos. Ask me anything, or ask me to research a current topic."
+      );
+      els.chatInput.value = "";
+      if (!DEMO_MODE) fetchIntegrationStatus();
+    }
+    async function submitEmailDraft(event) {
+      event.preventDefault();
+      els.emailDraftButton.disabled = true;
+      try {
+        await request("/email/draft", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: els.emailTo.value.trim(),
+            subject: els.emailSubject.value.trim(),
+            body: els.emailBody.value.trim()
+          })
+        });
+        els.emailForm.reset();
+        await fetchLogs(false);
+        showToast("Email draft queued. Review it in Human approval before sending.");
+      } catch (error) {
+        showToast(error.message || "Could not queue email draft.");
+      } finally {
+        await fetchEmailStatus();
+      }
+    }
+    async function fetchVault() {
+      try { const data = await request("/vault"); renderVault(data.vault || {}); }
+      catch (error) { els.vaultGrid.innerHTML = '<div class="empty">The credential vault is temporarily unavailable.</div>'; }
+    }
+    async function deploy(event) {
+      event.preventDefault(); const prompt = els.prompt.value.trim(); if (!prompt) return;
+      els.deployButton.disabled = true; els.deployButton.innerHTML = '<span class="spinner"></span>DEPLOYING...';
+      try {
+        if (DEMO_MODE) {
+          const timestamp = Date.now();
+          const demoEvents = [
+            ["Orchestrator", "MISSION_START", "Demo mission accepted in browser-only simulation."],
+            ["Identity-Agent", "IDENTITY_CHECK", "Demo agent identity and permissions checked."],
+            ["Policy-Agent", "POLICY_CHECK", "Demo policy evaluation recorded; no external action taken."],
+            ["Research-Agent", "RESEARCH", "Research step simulated; no live search was performed."],
+            ["Audit-Agent", "AUDIT_RECORD", "Demo mission recorded in the on-screen audit view."]
+          ];
+          for (const [index, [agent_name, action, details]] of demoEvents.entries()) {
+            allLogs.push({
+              timestamp: new Date(timestamp + index).toISOString(),
+              agent_name,
+              action,
+              details: `SIMULATION: ${details} Directive: ${prompt.slice(0, 180)}`,
+              status: "SUCCESS"
+            });
+          }
+          renderLogs(allLogs);
+          els.prompt.value = "";
+          showToast("Simulated demo mission complete. No backend action was performed.");
+          return;
+        }
+        await request("/task", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, user_id: "dashboard-operator" }) });
+        els.prompt.value = ""; showToast("Mission deployed. Watching the agent workforce.");
+        const started = Date.now();
+        while (Date.now() - started < 30000) { await new Promise(resolve => setTimeout(resolve, 2000)); await fetchLogs(false); }
+      } catch (error) { setConnection(false); showToast("Could not deploy mission. Is the API running on port 8000?"); }
+      finally {
+        els.deployButton.disabled = false;
+        els.deployButton.innerHTML = '<span class="button-content"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m13 3-9 11h7l-1 7 9-11h-7l1-7Z"/></svg>DEPLOY AGENTS</span>';
+      }
+    }
+    function clearAuditTrail() {
+      if (allLogs.length === 0) { showToast("No audit logs to clear."); return; }
+      const confirmed = confirm(`⚠️ Clear all ${allLogs.length} audit trail entries?\n\nThis action cannot be undone. The dashboard will reset to a fresh state.`);
+      if (!confirmed) return;
+      if (DEMO_MODE) {
+        renderLogs([]);
+        showToast("Simulated audit view cleared.");
+        return;
+      }
+      els.clearButton.disabled = true;
+      fetch(API_BASE + "/audit-log", { method: "DELETE" })
+        .then(res => res.json())
+        .then(async data => {
+          allLogs = [];
+          renderLogs([]);
+          await fetchLogs(false);
+          await fetchVault();
+          showToast("✓ Audit trail cleared. Dashboard reset to fresh state.");
+        })
+        .catch(error => {
+          showToast("Could not clear audit trail. Is the API running?");
+          console.error("Clear error:", error);
+        })
+        .finally(() => { els.clearButton.disabled = false; });
+    }
+    els.taskForm.addEventListener("submit", deploy);
+    els.refreshButton.addEventListener("click", () => {
+      if (DEMO_MODE) showToast("Demo view is simulated; no backend data to refresh.");
+      else fetchLogs();
+    });
+    els.clearButton.addEventListener("click", clearAuditTrail);
+    els.emailForm.addEventListener("submit", submitEmailDraft);
+    document.querySelectorAll(".nav-button").forEach(button => button.addEventListener("click", () => selectPage(button.dataset.page)));
+    document.addEventListener("copy", event => event.preventDefault());
+    document.addEventListener("cut", event => event.preventDefault());
+    els.integrationForm.addEventListener("submit", saveIntegrations);
+    els.chatForm.addEventListener("submit", sendChatMessage);
+    els.chatInput.addEventListener("keydown", event => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        els.chatForm.requestSubmit();
+      }
+    });
+    els.chatClear.addEventListener("click", startNewChat);
+    if (DEMO_MODE) {
+      initializeDemo();
+    } else {
+      checkHealth(); fetchLogs(false); fetchVault(); fetchEmailStatus(); fetchIntegrationStatus();
+      setInterval(checkHealth, 15000); setInterval(() => { fetchLogs(false); fetchVault(); fetchEmailStatus(); fetchIntegrationStatus(); }, 10000);
+    }
+  </script>
+</body>
+</html>
